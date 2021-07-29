@@ -1,5 +1,6 @@
 const groupModel = require('../models/group')
 const groupLogModel = require('../models/groupLog')
+const { consoleMessage } = require('../helpers/console')
 const { errorCatch } = require('../helpers/errorHandle')
 const moment = require('moment')
 
@@ -26,6 +27,7 @@ const checkLog = async ({ idGroup }) => {
         const gapMin = parseInt(process.env.GAP_MINUTES || 5);
         const check = await groupLogModel.findOne({ idGroup: '806636433469671' })
         const lastDate = now.diff(moment(check.lastInteractionAt), 'minutes');
+        consoleMessage(`Check GAP Time ${lastDate} >= ${gapMin}`, 'yellow')
         return (lastDate >= gapMin)
     } catch (e) {
         errorCatch(e)

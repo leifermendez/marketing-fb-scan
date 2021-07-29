@@ -120,7 +120,8 @@ const singlePost = async ({ page, data }) => {
         const group = await getGroup(message)
         const { fbGroupMobile } = group;
         const checkRegister = await checkLog({ idGroup: group.idGroup })
-        if (checkRegister) return true;
+        consoleMessage(`Check GAP Time ${checkRegister}`, 'yellow')
+        if (!checkRegister) return true;
 
         await page.goto(fbGroupMobile, { waitUntil: "networkidle0" });
 
