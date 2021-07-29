@@ -3,4 +3,5 @@ members.json
 db.js
 .env
 cookies.json
-data/*.json
+data/
+!data/.gitkeep
