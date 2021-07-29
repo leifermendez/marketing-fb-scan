@@ -3,3 +3,4 @@ members.json
 db.js
 .env
 cookies.json
+data/*
