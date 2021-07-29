@@ -2,3 +2,4 @@ node_modules
 members.json
 db.js
 .env
+cookies.json
