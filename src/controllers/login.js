@@ -145,7 +145,7 @@ const singlePost = async ({ page, data }, prevBlocked = true, groupData = false)
                     }, btnBlockedOkey);
                 }
             } catch (e) {
-                console.log('--', e)
+                consoleMessage(`Not blocked`, 'yellow')
                 // await page.close();
                 // singlePost({ page, data }, false, group)
             }
