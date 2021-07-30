@@ -73,14 +73,12 @@ const initMessage = () => {
 
 const cronStart = async () => {
 
-    const now = moment().format('DD-MM-YYYY hh:mm')
+    consoleMessage(`⚠ Remember google crendentials`, 'redBright')
 
     const optionsCron = {
         scheduled: true,
-        timezone: process.env.TIMEZONE || 'Europe/Madrid'
+        timezone: "America/Sao_Paulo"
     }
-
-    consoleMessage(`📆 Hour ${now}`, 'greenBright')
 
     consoleMessage(`📆 Cron every day 10:00 AM ...`, 'greenBright')
 
@@ -106,7 +104,6 @@ const cronStart = async () => {
         initMessage()
     }, optionsCron);
 }
-
 
 cronStart()
 dbConnect()
