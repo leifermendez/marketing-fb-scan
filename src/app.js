@@ -73,29 +73,34 @@ const initMessage = () => {
 
 const cronStart = async () => {
 
+    const optionsCron = {
+        scheduled: true,
+        timezone: process.env.TIMEZONE || 'Europe/Madrid'
+    }
+
     consoleMessage(`📆 Cron every day 10:00 AM ...`, 'greenBright')
 
     cron.schedule(`0 10 * * *`, () => {
         initMessage()
-    });
+    }, optionsCron);
 
     consoleMessage(`📆 Cron every day 06:00 PM ...`, 'greenBright')
 
     cron.schedule(`0 18 * * *`, () => {
         initMessage()
-    });
+    }, optionsCron);
 
     consoleMessage(`📆 Cron every day 08:00 PM ...`, 'greenBright')
 
     cron.schedule(`0 20 * * *`, () => {
         initMessage()
-    });
+    }, optionsCron);
 
     consoleMessage(`📆 Cron every day 10:00 PM ...`, 'greenBright')
 
     cron.schedule(`0 22 * * *`, () => {
         initMessage()
-    });
+    }, optionsCron);
 }
 
 
