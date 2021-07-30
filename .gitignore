@@ -7,3 +7,5 @@ data/*
 !data/.gitkeep
 tmp/*
 !tmp/.gitkeep
+google-secret.json
+token.json

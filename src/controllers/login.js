@@ -116,7 +116,7 @@ const singlePost = async ({ page, data }, prevBlocked = true, groupData = false)
             await dialog.accept();
         });
         const message = data;
-        const group = !groupData ? await getGroup() : groupData;
+        const group = !groupData ? await getGroup(data) : groupData;
         const { fbGroupMobile } = group;
         const checkRegister = await checkLog({ idGroup: group.idGroup })
         consoleMessage(`Check GAP Time ${checkRegister}`, 'yellow')
@@ -218,17 +218,17 @@ const singlePost = async ({ page, data }, prevBlocked = true, groupData = false)
 
         //TODO: Click boton de enviar
 
-        // const layoutBtnPost = (userFb.language === 'en') ?
-        //     `//button[@type="submit" and @value="Post"]` : `//button[@type="submit" and @value="Publicar"]`
+        const layoutBtnPost = (userFb.language === 'en') ?
+            `//button[@type="submit" and @value="Post"]` : `//button[@type="submit" and @value="Publicar"]`
 
-        // await page.waitForXPath(layoutBtnPost)
-        // const btnPost = (await page.$x(layoutBtnPost))[0];
-        // await page.evaluate((el) => {
-        //     el.click();
-        // }, btnPost);
+        await page.waitForXPath(layoutBtnPost)
+        const btnPost = (await page.$x(layoutBtnPost))[0];
+        await page.evaluate((el) => {
+            el.click();
+        }, btnPost);
 
-        // await saveLog({ idGroup: group.idGroup, message: message.messagesGlobal })
-        // await page.waitForTimeout(6000)
+        await saveLog({ idGroup: group.idGroup, message: message.messagesGlobal })
+        await page.waitForTimeout(6000)
 
         await page.close();
 
