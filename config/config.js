@@ -10,8 +10,8 @@ module.exports = {
             '--disable-gpu',
         ],
     },
-    username: 'tecniserviciosleifer@gmail.com',
-    password: 'Token.0102',
+    username: '',
+    password: '',
     useCookies: true,
     cookiesFilePath: './cookies.json',
     layout: {
