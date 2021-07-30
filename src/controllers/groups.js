@@ -43,4 +43,9 @@ const saveLog = async ({ idGroup, message }) => {
     await groupLogModel.create(data)
 }
 
-module.exports = { getGroup, saveLog, checkLog }
+const getAll = async () => {
+    const list = await groupModel.find({})
+    return list
+}
+
+module.exports = { getGroup, saveLog, checkLog, getAll }

@@ -1,8 +1,8 @@
 const pathCookieAccount = `${__dirname}/../../tmp`
 const { url, layout } = require('../../config/config')
 const { consoleMessage } = require('../helpers/console')
-const { getAccount } = require('../helpers/accounts')
-const { getGroup, saveLog, checkLog } = require('../helpers/groups')
+const { getAccount } = require('./accounts')
+const { getGroup, saveLog, checkLog } = require('./groups')
 const fs = require('fs')
 
 var userFb;
@@ -107,36 +107,66 @@ const login = async ({ page }) => {
 // Check ✔
 const closeBrowser = () => browser.close()
 
-const singlePost = async ({ page, data }) => {
+const singlePost = async ({ page, data }, prevBlocked = true, groupData = false) => {
     try {
         page.evaluate(() => {
             window.onbeforeunload = null;
         });
         page.on('dialog', async dialog => {
-            console.log(dialog.message());
             await dialog.accept();
         });
         const message = data;
-        const group = await getGroup(message)
+        const group = !groupData ? await getGroup() : groupData;
         const { fbGroupMobile } = group;
         const checkRegister = await checkLog({ idGroup: group.idGroup })
         consoleMessage(`Check GAP Time ${checkRegister}`, 'yellow')
         if (!checkRegister) return true;
 
         await page.goto(fbGroupMobile, { waitUntil: "networkidle0" });
+        consoleMessage(`Check blocked`, 'yellow')
 
-        //TODO: Capturamos el placeholder de postear
-        const layoutWrite = (userFb.language === 'en')
-            ? '//div[contains(.,"Write something...")]' : '//div[contains(.,"Escribe algo...")]';
+        if (prevBlocked) {
 
-        await page.waitForXPath(layoutWrite)
+            try {
+                //TODO: Revisar si esta bloqueado
+                const layoutBlocked = (userFb.language === 'en')
+                    ? '//a[contains(.,"Temporarily Blocked")]' : '//a[contains(.,"Se te bloqueó temporalmente")]';
 
-        const textInputMessage = (await page.$x(layoutWrite)).reverse()[0];
-        await page.evaluate((el) => {
-            el.focus();
-            el.click();
-            console.log(el);
-        }, textInputMessage);
+                await page.waitForXPath(layoutBlocked)
+                const btnBlocked = (await page.$x(layoutBlocked))[0];
+
+                if (btnBlocked) {
+                    const layoutOkey = (userFb.language === 'en')
+                        ? '//a[contains(.,"Okay")]' : '//a[contains(.,"Aceptar")]';
+                    const btnBlockedOkey = (await page.$x(layoutOkey))[0];
+                    await page.evaluate((el) => {
+                        el.focus();
+                        el.click();
+                    }, btnBlockedOkey);
+                }
+            } catch (e) {
+                singlePost({ page, data }, false, group)
+            }
+        }
+
+
+        try {
+            //TODO: Capturamos el placeholder de postear
+            const layoutWrite = (userFb.language === 'en')
+                ? '//div[contains(.,"Write something...")]' : '//div[contains(.,"Escribe algo...")]';
+
+            await page.waitForXPath(layoutWrite)
+
+            const textInputMessage = (await page.$x(layoutWrite)).reverse()[0];
+            await page.evaluate((el) => {
+                el.focus();
+                el.click();
+                console.log(el);
+            }, textInputMessage);
+        } catch (e) {
+            await page.close();
+            consoleMessage(`Not joined`, 'red')
+        }
 
         //TODO: Capturamos el input de postear
 
@@ -153,14 +183,34 @@ const singlePost = async ({ page, data }) => {
 
         //TODO: Escribimos el mensaje!
 
+
         const layoutText = `//div[@id="mshare_preview_placeholder"]`;
-        await page.keyboard.type(message.messagesGlobal + message.messagesLink);
-        await page.waitForTimeout(2000)
+        await page.waitForTimeout(800)
+
+        const mentionUserPage = process.env.PAGE_UID || [];
+        const mentionUserName = process.env.PAGE_USERNAME || ''
+
+        if (mentionUserPage.length) {
+            await page.keyboard.type(`@${mentionUserName}`, { delay: 300 });
+            const layoutMention = `//div[@class="mentions-suggest"]`
+            await page.waitForXPath(layoutMention)
+            await page.waitForTimeout(1250)
+            const layoutMentionUser = `//label[@uid="${mentionUserPage}"]`
+            const mentionBtn = (await page.$x(layoutMentionUser))[0];
+            await page.evaluate((el) => {
+                el.focus();
+                el.click();
+            }, mentionBtn);
+        }
+
+        await page.keyboard.type(' ' + message.messagesGlobal + ' ' + message.messagesLink, { delay: 120 });
+        await page.waitForTimeout(2500)
         await page.waitForXPath(layoutText)
         await page.evaluate((el) => {
             el.focus();
             el.click();
         }, childTxt);
+
 
         for (let i = 0; i < message.messagesLink.length; i++) {
             await page.keyboard.press('Backspace');
@@ -168,25 +218,89 @@ const singlePost = async ({ page, data }) => {
 
         //TODO: Click boton de enviar
 
-        const layoutBtnPost = (userFb.language === 'en') ?
-            `//button[@type="submit" and @value="Post"]` : `//button[@type="submit" and @value="Publicar"]`
+        // const layoutBtnPost = (userFb.language === 'en') ?
+        //     `//button[@type="submit" and @value="Post"]` : `//button[@type="submit" and @value="Publicar"]`
 
-        await page.waitForXPath(layoutBtnPost)
-        const btnPost = (await page.$x(layoutBtnPost))[0];
-        await page.evaluate((el) => {
-            el.click();
-        }, btnPost);
+        // await page.waitForXPath(layoutBtnPost)
+        // const btnPost = (await page.$x(layoutBtnPost))[0];
+        // await page.evaluate((el) => {
+        //     el.click();
+        // }, btnPost);
 
-        await saveLog({ idGroup: group.idGroup, message: message.messagesGlobal })
-        await page.waitForTimeout(6000)
+        // await saveLog({ idGroup: group.idGroup, message: message.messagesGlobal })
+        // await page.waitForTimeout(6000)
 
         await page.close();
 
 
     } catch (e) {
+        await page.close();
         console.log('Ocurrio un error!', e);
     }
 }
+
+
+const join = async ({ page, data }, step = 0) => {
+
+    page.evaluate(() => {
+        window.onbeforeunload = null;
+    });
+
+    page.on('dialog', async dialog => {
+        console.log(dialog.message());
+        await dialog.accept();
+    });
+
+    const { fbGroupMobile } = data;
+    await page.waitForTimeout(1500)
+    await page.goto(fbGroupMobile, { waitUntil: "networkidle0" });
+
+
+    try {
+        //TODO: Revisar si esta bloqueado
+        const layoutBlocked = (userFb.language === 'en')
+            ? '//a[contains(.,"Temporarily Blocked")]' : '//a[contains(.,"Se te bloqueó temporalmente")]';
+
+        await page.waitForXPath(layoutBlocked)
+        const btnBlocked = (await page.$x(layoutBlocked))[0];
+
+        if (btnBlocked) {
+            const layoutOkey = (userFb.language === 'en')
+                ? '//a[contains(.,"Okay")]' : '//a[contains(.,"Aceptar")]';
+            const btnBlockedOkey = (await page.$x(layoutOkey))[0];
+            await page.evaluate((el) => {
+                el.focus();
+                el.click();
+            }, btnBlockedOkey);
+        }
+    } catch (e) {
+        console.log('Seguimos', e)
+    }
+
+    try {
+        //TODO: Nos unimos
+
+        const layoutJoin = (userFb.language === 'en') ?
+            `//button[@label="Join Group"]` : `//button[@label="Unirte al grupo"]`
+        await page.waitForXPath(layoutJoin)
+        await page.waitForTimeout(1000)
+        const childJoinBtn = (await page.$x(layoutJoin))[0];
+        await page.evaluate((el) => {
+            el.focus();
+            el.click();
+        }, childJoinBtn);
+
+        await page.goto(fbGroupMobile, { waitUntil: "networkidle0" });
+        await page.waitForTimeout(2000)
+        await page.close();
+    } catch (e) {
+        await page.close();
+        consoleMessage('Next step B', 'magentaBright')
+    }
+
+
+}
+
 
 const initLogin = async ({ page }) => {
     await init({ page })
@@ -199,4 +313,11 @@ const postGroup = async ({ page, data }) => {
     await singlePost({ page, data })
 }
 
-module.exports = { initLogin, postGroup }
+const joinGroup = async ({ page, data }) => {
+    await init({ page })
+    await login({ page })
+    await join({ page, data })
+}
+
+
+module.exports = { initLogin, postGroup, joinGroup }
