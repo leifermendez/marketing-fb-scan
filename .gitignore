@@ -5,3 +5,5 @@ db.js
 cookies.json
 data/*
 !data/.gitkeep
+tmp/*
+!tmp/.gitkeep
