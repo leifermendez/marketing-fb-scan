@@ -73,10 +73,14 @@ const initMessage = () => {
 
 const cronStart = async () => {
 
+    const now = moment().format('DD-MM-YYYY hh:mm')
+
     const optionsCron = {
         scheduled: true,
         timezone: process.env.TIMEZONE || 'Europe/Madrid'
     }
+
+    consoleMessage(`📆 Hour ${now}`, 'greenBright')
 
     consoleMessage(`📆 Cron every day 10:00 AM ...`, 'greenBright')
 
