@@ -4,6 +4,7 @@ const { consoleMessage } = require('../helpers/console')
 const { getAccount } = require('./accounts')
 const { getGroup, saveLog, checkLog } = require('./groups')
 const fs = require('fs')
+const moment = require('moment')
 
 var userFb;
 
@@ -109,6 +110,7 @@ const closeBrowser = () => browser.close()
 
 const singlePost = async ({ page, data }, prevBlocked = true, groupData = false) => {
     try {
+        consoleMessage(`Time:  ${moment().format('DD-MM-YYYY hh:mm')}`, 'yellow')
         page.evaluate(() => {
             window.onbeforeunload = null;
         });
