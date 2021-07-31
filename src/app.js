@@ -77,7 +77,7 @@ const cronStart = async () => {
 
     const optionsCron = {
         scheduled: true,
-        timezone: "America/Sao_Paulo"
+        timezone: process.env.TIMEZONE || "Europe/Madrid"
     }
 
     consoleMessage(`📆 Cron every day 10:00 AM ...`, 'greenBright')
