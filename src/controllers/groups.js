@@ -4,22 +4,15 @@ const { consoleMessage } = require('../helpers/console')
 const { errorCatch } = require('../helpers/errorHandle')
 const moment = require('moment')
 
-const getGroup = async (message) => {
+const getGroup = async () => {
     try {
-        const { tag } = message
-
         const resDetail = await groupModel.findOne(
-            {
-                tag: { $in: tag.split(',') }
-            },
+            {},
             null,
             {
                 sort: { lastInteractionAt: 1 }
             }
         )
-
-        console.log(resDetail)
-
         resDetail.lastInteractionAt = Date.now()
         resDetail.save()
         return resDetail

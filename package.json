@@ -20,6 +20,7 @@
     "mongoose": "^5.13.4",
     "node-cron": "^3.0.0",
     "puppeteer": "^10.0.0",
+    "puppeteer-autoscroll-down": "^0.1.7",
     "puppeteer-cluster": "^0.22.0",
     "puppeteer-extra": "^3.1.18",
     "puppeteer-extra-plugin-stealth": "^2.7.8",

@@ -1,10 +1,11 @@
 const pathCookieAccount = `${__dirname}/../../tmp`
 const { url, layout } = require('../../config/config')
 const { consoleMessage } = require('../helpers/console')
+const autoScroll = require('../helpers/autoScroll')
 const { getAccount } = require('./accounts')
 const { getGroup, saveLog, checkLog } = require('./groups')
+const { createLeadBulk } = require('./leads')
 const fs = require('fs')
-const moment = require('moment')
 
 var userFb;
 
@@ -105,223 +106,82 @@ const login = async ({ page }) => {
 
 }
 
-// Check ✔
-const closeBrowser = () => browser.close()
+//
+const addListener = (type, page) => {
+    return page.evaluateOnNewDocument(type => {
+        // here we are in the browser context
+        document.addEventListener(type, e => {
+            window.onCustomEvent({ type, detail: e.detail });
+        });
+    }, type);
+}
 
-const singlePost = async ({ page, data }, prevBlocked = true, groupData = false) => {
+// get members
+
+const getMembersIn = async (page) => {
     try {
-        consoleMessage(`Time:  ${moment().format('DD-MM-YYYY hh:mm')}`, 'yellow')
+        linkUser = []
+        const tmpArrayUser = await page.$$eval('[role="link"]', elms => elms.map(elm => {
+            const parseArray = elm.getAttribute('href').split('/');
+            const checkUser = parseArray.includes('user')
+            const name = (elm.innerHTML && elm.innerHTML.length < 81) ? elm.innerHTML : null;
+            parseArray.pop()
+            const uuid = (checkUser) ? parseArray.pop() : null;
+            const userObject = {
+                name,
+                uuid
+            }
+            return userObject
+        }));
+
+        linkUser = linkUser.concat(tmpArrayUser).filter(a => (a.uuid !== null && a.name !== null))
+        linkUser = [...new Set(linkUser)]
+        await createLeadBulk(linkUser)
+        consoleMessage(`Saving...(${linkUser.length})`, 'blueBright')
+    } catch (e) {
+        console.log('Cerrando...')
+    }
+}
+
+const scanGroup = async ({ page, data }) => {
+
+    try {
         page.evaluate(() => {
             window.onbeforeunload = null;
         });
+
         page.on('dialog', async dialog => {
+            console.log(dialog.message());
             await dialog.accept();
         });
-        const message = data;
-        const group = !groupData ? await getGroup(data) : groupData;
-        const { fbGroupMobile } = group;
-        const checkRegister = await checkLog({ idGroup: group.idGroup })
-        consoleMessage(`Check GAP Time ${checkRegister}`, 'yellow')
-        if (!checkRegister) return true;
 
-        await page.goto(fbGroupMobile, { waitUntil: "networkidle0" });
-        consoleMessage(`Check blocked`, 'yellow')
+        await page.exposeFunction('onCustomEvent', (e) => {
+            getMembersIn(page)
+        });
 
-        if (prevBlocked) {
-
-            try {
-                //TODO: Revisar si esta bloqueado
-                const layoutBlocked = (userFb.language === 'en')
-                    ? '//a[contains(.,"Temporarily Blocked")]' : '//a[contains(.,"Se te bloqueó temporalmente")]';
-
-                await page.waitForXPath(layoutBlocked)
-                const btnBlocked = (await page.$x(layoutBlocked))[0];
-
-                if (btnBlocked) {
-                    const layoutOkey = (userFb.language === 'en')
-                        ? '//a[contains(.,"Okay")]' : '//a[contains(.,"Aceptar")]';
-                    const btnBlockedOkey = (await page.$x(layoutOkey))[0];
-                    await page.evaluate((el) => {
-                        el.focus();
-                        el.click();
-                    }, btnBlockedOkey);
-                }
-            } catch (e) {
-                consoleMessage(`Not blocked`, 'yellow')
-                // await page.close();
-                // singlePost({ page, data }, false, group)
-            }
-        }
+        const { idGroup } = data;
+        await page.waitForTimeout(1500)
+        addListener('scroll', page)
+        await page.goto(`https://www.facebook.com/groups/${idGroup}/members`, { waitUntil: "networkidle0" });
 
 
-        try {
-            //TODO: Capturamos el placeholder de postear
-            const layoutWrite = (userFb.language === 'en')
-                ? '//div[contains(.,"Write something...")]' : '//div[contains(.,"Escribe algo...")]';
 
-            await page.waitForXPath(layoutWrite)
-
-            const textInputMessage = (await page.$x(layoutWrite)).reverse()[0];
-            await page.evaluate((el) => {
-                el.focus();
-                el.click();
-                console.log(el);
-            }, textInputMessage);
-        } catch (e) {
-            await page.close();
-            consoleMessage(`Not joined`, 'red')
-        }
-
-        //TODO: Capturamos el input de postear
-
-        const layoutInputWrite = (userFb.language === 'en') ?
-            `//textarea[@aria-label="What's on your mind?"]` : `//textarea[@aria-label="¿Qué estás pensando?"]`
-        await page.waitForXPath(layoutInputWrite)
-        await page.waitForTimeout(1000)
-        const childTxt = (await page.$x(layoutInputWrite))[0];
-        await page.evaluate((el) => {
-            el.focus();
-            el.click();
-        }, childTxt);
-
-
-        //TODO: Escribimos el mensaje!
-
-
-        const layoutText = `//div[@id="mshare_preview_placeholder"]`;
-        await page.waitForTimeout(800)
-
-        const mentionUserPage = process.env.PAGE_UID || [];
-        const mentionUserName = process.env.PAGE_USERNAME || ''
-
-        if (mentionUserPage.length) {
-            await page.keyboard.type(`@${mentionUserName}`, { delay: 300 });
-            const layoutMention = `//div[@class="mentions-suggest"]`
-            await page.waitForXPath(layoutMention)
-            await page.waitForTimeout(1250)
-            const layoutMentionUser = `//label[@uid="${mentionUserPage}"]`
-            const mentionBtn = (await page.$x(layoutMentionUser))[0];
-            await page.evaluate((el) => {
-                el.focus();
-                el.click();
-            }, mentionBtn);
-        }
-
-        await page.keyboard.type(' ' + message.messagesGlobal + ' ' + message.messagesLink, { delay: 120 });
-        await page.waitForTimeout(2500)
-        await page.waitForXPath(layoutText)
-        await page.evaluate((el) => {
-            el.focus();
-            el.click();
-        }, childTxt);
-
-
-        for (let i = 0; i < message.messagesLink.length; i++) {
-            await page.keyboard.press('Backspace');
-        }
-
-        //TODO: Click boton de enviar
-
-        const layoutBtnPost = (userFb.language === 'en') ?
-            `//button[@type="submit" and @value="Post"]` : `//button[@type="submit" and @value="Publicar"]`
-
-        await page.waitForXPath(layoutBtnPost)
-        const btnPost = (await page.$x(layoutBtnPost))[0];
-        await page.evaluate((el) => {
-            el.click();
-        }, btnPost);
-
-        await saveLog({ idGroup: group.idGroup, message: message.messagesGlobal })
-        await page.waitForTimeout(6000)
-
-        await page.close();
-
+        await autoScroll(page, 400, 1050)
+        // 
 
     } catch (e) {
-        await page.close();
-        console.log('Ocurrio un error!', e);
+        console.log('Error', e)
     }
 }
 
+/*
+*/
 
-const join = async ({ page, data }, step = 0) => {
-
-    page.evaluate(() => {
-        window.onbeforeunload = null;
-    });
-
-    page.on('dialog', async dialog => {
-        console.log(dialog.message());
-        await dialog.accept();
-    });
-
-    const { fbGroupMobile } = data;
-    await page.waitForTimeout(1500)
-    await page.goto(fbGroupMobile, { waitUntil: "networkidle0" });
-
-
-    try {
-        //TODO: Revisar si esta bloqueado
-        const layoutBlocked = (userFb.language === 'en')
-            ? '//a[contains(.,"Temporarily Blocked")]' : '//a[contains(.,"Se te bloqueó temporalmente")]';
-
-        await page.waitForXPath(layoutBlocked)
-        const btnBlocked = (await page.$x(layoutBlocked))[0];
-
-        if (btnBlocked) {
-            const layoutOkey = (userFb.language === 'en')
-                ? '//a[contains(.,"Okay")]' : '//a[contains(.,"Aceptar")]';
-            const btnBlockedOkey = (await page.$x(layoutOkey))[0];
-            await page.evaluate((el) => {
-                el.focus();
-                el.click();
-            }, btnBlockedOkey);
-        }
-    } catch (e) {
-        console.log('Seguimos', e)
-    }
-
-    try {
-        //TODO: Nos unimos
-
-        const layoutJoin = (userFb.language === 'en') ?
-            `//button[@label="Join Group"]` : `//button[@label="Unirte al grupo"]`
-        await page.waitForXPath(layoutJoin)
-        await page.waitForTimeout(1000)
-        const childJoinBtn = (await page.$x(layoutJoin))[0];
-        await page.evaluate((el) => {
-            el.focus();
-            el.click();
-        }, childJoinBtn);
-
-        await page.goto(fbGroupMobile, { waitUntil: "networkidle0" });
-        await page.waitForTimeout(2000)
-        await page.close();
-    } catch (e) {
-        await page.close();
-        consoleMessage('Next step B', 'magentaBright')
-    }
-
-
-}
-
-
-const initLogin = async ({ page }) => {
+const scanMembers = async ({ page, data }) => {
     await init({ page })
     await login({ page })
-}
-
-const postGroup = async ({ page, data }) => {
-    await init({ page })
-    await login({ page })
-    await singlePost({ page, data })
-}
-
-const joinGroup = async ({ page, data }) => {
-    await init({ page })
-    await login({ page })
-    await join({ page, data })
+    await scanGroup({ page, data })
 }
 
 
-module.exports = { initLogin, postGroup, joinGroup }
+module.exports = { scanMembers }
