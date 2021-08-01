@@ -1,6 +1,5 @@
 require('dotenv').config()
 const puppeteer = require('puppeteer-extra')
-const express = require('express')
 const { Cluster } = require('puppeteer-cluster');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 const { dbConnect } = require('../config/mongo')
@@ -72,12 +71,16 @@ const initMessage = () => {
 }
 
 const cronStart = async () => {
+    const now = moment().format('DD/MM/YYYY hh:mm')
+    const timezone = process.env.TIMEZONE || "Europe/Madrid"
 
-    consoleMessage(`⚠ Remember google crendentials`, 'redBright')
+    consoleMessage(`Remember google crendentials`, 'cyan')
+    consoleMessage(`Timezone: ${timezone}`, 'cyan')
+    consoleMessage(`Hour: ${now}`, 'cyan')
 
     const optionsCron = {
         scheduled: true,
-        timezone: process.env.TIMEZONE || "Europe/Madrid"
+        timezone
     }
 
     consoleMessage(`📆 Cron every day 10:00 AM ...`, 'greenBright')
