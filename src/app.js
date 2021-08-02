@@ -9,8 +9,6 @@ const { consoleMessage } = require('./helpers/console')
 const { puppeterConfig } = require('../config/config')
 const { scanMembers } = require('./controllers/login')
 const { getGroup } = require('./controllers/groups')
-const listMessages = require('./controllers/excel')
-const moment = require('moment')
 
 
 /**
@@ -38,15 +36,16 @@ const initAll = async () => {
 
 const cronStart = async () => {
     const timezone = process.env.TIMEZONE || "Europe/Madrid"
+    const minutes = process.env.EVERY_MINUTES || 45
 
     const optionsCron = {
         scheduled: true,
         timezone
     }
 
-    consoleMessage(`📆 Cron every day 10:00 AM ...`, 'greenBright')
+    consoleMessage(`📆 Cron every ${minutes} minutes..`, 'greenBright')
 
-    cron.schedule(`*/30 * * * *`, () => {
+    cron.schedule(`*/${minutes} * * * *`, () => {
         initAll()
     }, optionsCron);
 

@@ -3,7 +3,6 @@ const { url, layout } = require('../../config/config')
 const { consoleMessage } = require('../helpers/console')
 const autoScroll = require('../helpers/autoScroll')
 const { getAccount } = require('./accounts')
-const { getGroup, saveLog, checkLog } = require('./groups')
 const { createLeadBulk } = require('./leads')
 const fs = require('fs')
 
@@ -162,9 +161,9 @@ const scanGroup = async ({ page, data }) => {
         const { idGroup } = data;
         await page.waitForTimeout(1500)
         addListener('scroll', page)
-        await page.goto(`https://www.facebook.com/groups/${idGroup}/members`, { waitUntil: "networkidle0" });
-
-
+        const urlFb = `https://www.facebook.com/groups/${idGroup}/members`
+        console.log(urlFb)
+        await page.goto(urlFb, { waitUntil: "networkidle0" });
 
         await autoScroll(page, 400, 1050)
         // 
