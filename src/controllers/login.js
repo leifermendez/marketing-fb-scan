@@ -1,6 +1,7 @@
 const pathCookieAccount = `${__dirname}/../../tmp`
 const { url, layout } = require('../../config/config')
 const { consoleMessage } = require('../helpers/console')
+const { sendNoty } = require('../helpers/notification')
 const autoScroll = require('../helpers/autoScroll')
 const { getAccount } = require('./accounts')
 const { createLeadBulk } = require('./leads')
@@ -138,6 +139,7 @@ const getMembersIn = async (page) => {
         await createLeadBulk(linkUser)
         consoleMessage(`Saving...(${linkUser.length})`, 'blueBright')
     } catch (e) {
+        sendNoty({ title: 'Actualizando Leads', message: '🍌', type: 'success', source: 'total_leads' })
         console.log('Cerrando...')
     }
 }
@@ -169,6 +171,7 @@ const scanGroup = async ({ page, data }) => {
         // 
 
     } catch (e) {
+        sendNoty({ title: 'Actualizando Leads', message: '🍌', type: 'success', source: 'total_leads' })
         console.log('Error', e)
     }
 }
